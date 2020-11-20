@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Blue SG Stats</title>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js" integrity="sha256-t9UJPrESBeG2ojKTIcFLPGF7nHi2vEc7f5A2KpH/UBU=" crossorigin="anonymous"></script>
+        <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>        
+    </head>
+
+    <body>
+        <p>
+            Station: <select id="station"></select><br>
+            <button class="shortcut" data-id="bukitbatok-bukitbatokstreet31-blk307" id="defaultShortcut">Home</button>
+            <button class="shortcut" data-id="jurongwest-jurongweststreet93-blk986-deck1a">Work</button>
+            <button class="shortcut" data-id="woodlands-woodlanddrive14-blk505a-deck1">Crispy</button><br>
+            Day: <select id="day">
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+                <option value="0">Sunday</option>
+            </select><br>
+            Range: <select>
+                <option>All time</option>
+            </select>
+        </p>
+
+        <p>Displaying stats for <a id="stationLink" target="_blank" rel="noopener noreferrer"><span id="stationName"></span></a></p>
+
+        <canvas id="chart" width="600" height="800"></canvas>
+
+        <script>
+            var fullData;
+            var chart;
+
+            var urlParams = new URLSearchParams(window.location.search);
+
+            $.ajax({
+                url: "https://asia-east2-bluesgstats.cloudfunctions.net/getData?secret=" + urlParams.get("secret"),
+                dataType: "json"
+            }).done((ajaxData) => {
+                fullData = ajaxData;
+
+                var station = $("#station");
+                for (var stationId in fullData) {
+                    var stationData = fullData[stationId];
+                    station.append("<option value='" + stationId + "'>" + stationData.name + "</option>");
+                }
+
+                var emptyData = new Array(96).fill(0);
+                var labels = [];
+                for (var i = 0; i < 2; i++) {
+                    for (var h = 0; h < 12; h++) {
+                        for (var m = 0; m < 4; m++) {
+                            labels.push(
+                                (h == 0 ? "12" : h) + 
+                                ":" + 
+                                (m == 0 ? "00" : (m * 15)) +
+                                (i == 0 ? "AM" : "PM"));
+                        }
+                    }
+                }
+
+                var ctx = $("#chart");
+                chart = new Chart(ctx, {
+                    type: 'horizontalBar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Average cars',
+                            data: emptyData,
+                            backgroundColor: '#bdecff',
+                            barPercentage: 1,
+                            categoryPercentage: 1
+                        }]
+                    },
+                    options: {
+                        responsive: false,
+                        scales: {
+                            xAxes: [{
+                                ticks: {
+                                    beginAtZero: true,
+                                    suggestedMin: 0,
+                                    suggestedMax: 4,
+                                    stepSize: 1
+                                }
+                            }]
+                        },
+                        tooltips: {
+                            intersect: false,
+                            callbacks: {
+                                afterLabel: function(tooltipItem, data) {
+                                    var average = tooltipItem.value;
+
+                                    var human = "";
+
+                                    if (average < 0.5) human = "Almost never any cars";
+                                    else if (average < 1) human = "Rarely any cars";
+                                    else if (average < 2) human = "May have cars";
+                                    else if (average < 3) human = "Likely has cars";
+                                    else if (average < 3.5) human = "Most likely has cars";
+                                    else human = "Almost certainly has cars";
+                                    
+                                    /*human += " / ";
+
+                                    if (average >= 3.5) human += "Very rarely any slots";
+                                    else if (average >= 3) human += "Rarely any slots";
+                                    else if (average >= 2) human += "May have slots";
+                                    else if (average >= 1) human += "Likely has slots";
+                                    else human += "Most likely has slots";*/
+                                    
+                                    return human;
+                                }
+                            }
+                        }
+                    }
+                });
+
+                var day = new Date().getDay();
+                $("#day").val(day);
+
+                updateGraph();
+                $("#station, #day").change(updateGraph);
+                $(".shortcut").click(function () {
+                    $("#station").val($(this).data("id"));
+                    updateGraph();
+                });
+
+                $("#defaultShortcut").click();
+            });
+
+            function updateGraph() {
+                var stationId = $("#station").val();
+                var day = $("#day").val();
+
+                var stationData = fullData[stationId];
+                $("#stationName").text(stationData.name);
+                $("#stationLink").attr("href", "https://www.google.com/maps/search/?api=1&query=" + stationData.location.lat + "," + stationData.location.lng);
+
+                var graphData = stationData.data["alltime"][day].cars;
+                chart.data.datasets[0].data = graphData;
+                chart.update();
+            }
+        </script>
+    </body>
+</html>
