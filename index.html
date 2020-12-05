@@ -91,6 +91,12 @@
                         tooltips: {
                             intersect: false,
                             callbacks: {
+                                label: function(tooltipItem, data) {
+                                    var average = tooltipItem.value;
+                                    var averageRounded = Math.round(average * 10) / 10;
+
+                                    return "Average cars: " + averageRounded;
+                                },
                                 afterLabel: function(tooltipItem, data) {
                                     var average = tooltipItem.value;
 
