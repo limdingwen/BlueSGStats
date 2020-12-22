@@ -36,6 +36,30 @@
             var chart;
 
             var urlParams = new URLSearchParams(window.location.search);
+            var date = new Date();
+
+            var currentInterval = date.getHours() * 4 + Math.floor(date.getMinutes() / 15);
+            var backgroundColors = [];
+            var allBlueBackgroundColors = [];
+            for (var i = 0; i < 96; i++) {
+                if (i == currentInterval) backgroundColors.push('#ffcccb');
+                else backgroundColors.push('#bdecff');
+                allBlueBackgroundColors.push('#bdecff');
+            }
+
+            var emptyData = new Array(96).fill(0);
+            var labels = [];
+            for (var i = 0; i < 2; i++) {
+                for (var h = 0; h < 12; h++) {
+                    for (var m = 0; m < 4; m++) {
+                        labels.push(
+                            (h == 0 ? "12" : h) + 
+                            ":" + 
+                            (m == 0 ? "00" : (m * 15)) +
+                            (i == 0 ? "AM" : "PM"));
+                    }
+                }
+            }
 
             $.ajax({
                 url: "https://asia-east2-bluesgstats.cloudfunctions.net/getData?secret=" + urlParams.get("secret"),
@@ -49,20 +73,6 @@
                     station.append("<option value='" + stationId + "'>" + stationData.name + "</option>");
                 }
 
-                var emptyData = new Array(96).fill(0);
-                var labels = [];
-                for (var i = 0; i < 2; i++) {
-                    for (var h = 0; h < 12; h++) {
-                        for (var m = 0; m < 4; m++) {
-                            labels.push(
-                                (h == 0 ? "12" : h) + 
-                                ":" + 
-                                (m == 0 ? "00" : (m * 15)) +
-                                (i == 0 ? "AM" : "PM"));
-                        }
-                    }
-                }
-
                 var ctx = $("#chart");
                 chart = new Chart(ctx, {
                     type: 'horizontalBar',
@@ -71,7 +81,7 @@
                         datasets: [{
                             label: 'Average cars',
                             data: emptyData,
-                            backgroundColor: '#bdecff',
+                            backgroundColor: allBlueBackgroundColors,
                             barPercentage: 1,
                             categoryPercentage: 1
                         }]
@@ -124,8 +134,7 @@
                     }
                 });
 
-                var day = new Date().getDay();
-                $("#day").val(day);
+                $("#day").val(date.getDay());
 
                 updateGraph();
                 $("#station, #day").change(updateGraph);
@@ -140,6 +149,9 @@
             function updateGraph() {
                 var stationId = $("#station").val();
                 var day = $("#day").val();
+
+                if (day == date.getDay()) chart.data.datasets[0].backgroundColor = backgroundColors;
+                else chart.data.datasets[0].backgroundColor = allBlueBackgroundColors;
 
                 var stationData = fullData[stationId];
                 $("#stationName").text(stationData.name);
